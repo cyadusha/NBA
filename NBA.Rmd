@@ -1,0 +1,82 @@
+---
+title: "NBA"
+author: "Yadu"
+date: "March 4, 2016"
+output: html_document
+---
+
+First we load the appropriate packages as follows and then download the csv file from github. Then, we replace all of the empty spaces with NA and remove all of the rows that contain the column names as well as the bottom row which contains the total for each team. 
+
+```{r}
+library(RCurl)
+library(tidyr)
+library(dplyr)
+url = "https://raw.githubusercontent.com/cyadusha/NBA/master/leagues_NBA_wins_active.csv"
+x = getURL(url)
+NBA = read.csv(file = textConnection(x), header = TRUE, na.strings = c("", "NA"))
+NBA = subset(NBA, Rk != "Rk")
+NBA = subset(NBA, Season != "Total")
+```
+
+Because we do not need those two columns, we remove the columns containing the Rank and the League Names. 
+
+```{r}
+NBA = subset(NBA, select = -Rk)
+NBA = subset(NBA, select = -Lg)
+```
+
+Then we replace the initials for each team with the appropriate team name. To facilitate this, we get the number of columns. The first column is titled Season. This means that we do not need to replace that column title with anything. Therefore, we come up with new column names for columns 2 through 31. We will use column names that do not have any spaces.
+
+```{r}
+ncol(NBA)
+colnames(NBA)[2:31] = c("Hawks", "Celtics", "Nets", "Bulls", "Hornets", "Cavaliers", "Mavericks", "Nuggets", "Pistons", "Warriors", "Rockets", "Pacers", "Clippers", "Lakers", "Grizzlies", "Heat", "Bucks", "Timberwolves", "Pelicans", "Knicks", "Thunder", "Magic", "76ers", "Suns", "Blazers", "Kings", "Spurs", "Raptors", "Jazz", "Wizards")
+```
+
+Now, we gather all of the team names into one column and title our new dataset as follows. We replace all of the null values with 0. For the last column to be read as a vector of integers, we use the as.integer command as follows. 
+
+```{r}
+NBA = NBA %>% gather(Season, Team, Hawks:Wizards, na.rm = F)
+colnames(NBA) = c("Season", "Team", "Winnings")
+NBA[is.na(NBA)] = 0
+NBA$Winnings = c(as.integer(NBA$Winnings))
+```
+
+Now, we sum the number of winnings for each team and group them as follows.
+
+```{r}
+totalNBA = NBA %>% group_by(Team) %>% summarise(Winnings = sum(Winnings))
+```
+
+In order for all of the appropriate information to be displayed, me convert the data set into a data frame as follows. 
+
+```{r}
+data.frame(totalNBA)
+```
+
+In order to obtain the maximum total number of winnings in the franchise history, we have to use the which.max command. We also want the name of the team who has had the maximum total number of winnings. For that reason we use square brackets as well as a comma so that we can get the entire row of data.  
+
+```{r}
+totalNBA[which.max(totalNBA$Winnings),]
+```
+
+The team with the maximum total number of winnings in the franchise history is the Lakers. They have won 3,320 games thus far. 
+
+Now if we want the maximum wins by a team over the time span, we use the following command. This will take the number of wins for each team during each season and select the maximum number of wins as well as return the season where the team won the most games. 
+
+```{r}
+totalNBA2 = NBA %>% group_by(Team) %>% summarise(Season = Season[which.max(Winnings)], Winnings = max(Winnings))
+```
+
+We use the data frame command again as follows.
+
+```{r}
+data.frame(totalNBA2)
+```
+
+Now if we want to obtain the maximum number of wins by a team over the time span, all we have to do is just obtain the row from the original dataset where the number of winnings is maximum.
+
+```{r}
+NBA[which.max(NBA$Winnings),]
+```
+
+The team who won the maximum number of games over the time span is the Chicago Bulls in 1995-1996. They won 72 games in that season. 
